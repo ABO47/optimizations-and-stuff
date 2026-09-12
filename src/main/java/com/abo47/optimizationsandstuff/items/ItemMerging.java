@@ -5,11 +5,13 @@ import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.system.tick.TickingSystem;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.modules.entity.DespawnComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.Interactable;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent;
 import com.hypixel.hytale.server.core.modules.entity.item.PickupItemComponent;
 import com.hypixel.hytale.server.core.modules.entity.item.PreventItemMerging;
+import com.hypixel.hytale.server.core.modules.time.TimeResource;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.abo47.optimizationsandstuff.config.TuningConfig;
@@ -41,6 +43,7 @@ public class ItemMerging extends TickingSystem<EntityStore> {
     private long merged;
     private long removed;
     private long scans;
+    private long ttlCapped;
 
     @Override
     public void tick(final float dt, final int systemIndex, @Nonnull final Store<EntityStore> store) {
@@ -61,10 +64,46 @@ public class ItemMerging extends TickingSystem<EntityStore> {
         if (entryCount > 1) {
             mergeAll(store, config.getItemRadius());
         }
+        capLifetimes(store, config.getItemMaxLifetime());
         for (int i = 0; i < entryCount; i++) {
             entries.get(i).ref = null;
         }
         entryCount = 0;
+    }
+
+    private void capLifetimes(@Nonnull final Store<EntityStore> store, final int maxLifetime) {
+        if (maxLifetime <= 0 || entryCount == 0) {
+            return;
+        }
+        TimeResource time;
+        try {
+            time = store.getResource(TimeResource.getResourceType());
+            if (time == null || time.getNow() == null) {
+                return;
+            }
+        } catch (Exception e) {
+            return;
+        }
+        var despawnType = DespawnComponent.getComponentType();
+        var cutoff = time.getNow().plusSeconds(maxLifetime);
+        for (int i = 0; i < entryCount; i++) {
+            Entry e = entries.get(i);
+            if (e.ref == null || !e.ref.isValid()) {
+                continue;
+            }
+            try {
+                DespawnComponent despawn = store.getComponent(e.ref, despawnType);
+                if (despawn == null) {
+                    continue;
+                }
+                var at = despawn.getDespawn();
+                if (at == null || at.isAfter(cutoff)) {
+                    despawn.setDespawnTo(time.getNow(), maxLifetime);
+                    ttlCapped++;
+                }
+            } catch (Exception ignored) {
+            }
+        }
     }
 
     private void gather(@Nonnull final Store<EntityStore> store) {
@@ -199,9 +238,14 @@ public class ItemMerging extends TickingSystem<EntityStore> {
         return scans;
     }
 
+    public long getTtlCapped() {
+        return ttlCapped;
+    }
+
     public void resetCounters() {
         merged = 0;
         removed = 0;
         scans = 0;
+        ttlCapped = 0;
     }
 }

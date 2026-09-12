@@ -64,6 +64,7 @@ public final class SettingsLoader {
         key("ItemMerging", "itemMerging", "enabled");
         key("ItemMergingRadius", "itemMerging", "radius");
         key("ItemMergingIntervalTicks", "itemMerging", "everyTicks");
+        key("ItemMergingMaxLifetime", "itemMerging", "maxLifetime");
         key("TreeFelling", "treeFelling", "enabled");
         key("TreeMaxBlocks", "treeFelling", "maxBlocks");
         key("FarView", "farView", "enabled");

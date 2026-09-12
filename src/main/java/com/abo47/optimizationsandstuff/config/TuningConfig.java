@@ -172,6 +172,13 @@ public class TuningConfig {
         .documentation("Ticks between merge scans.")
         .add()
         .append(
+            new KeyedCodec<>("ItemMergingMaxLifetime", Codec.INTEGER),
+            (o, v) -> o.itemMergingMaxLifetime = v,
+            o -> o.itemMergingMaxLifetime
+        )
+        .documentation("Cap dropped-item lifetime in seconds, 0 = engine default.")
+        .add()
+        .append(
             new KeyedCodec<>("TreeFelling", Codec.BOOLEAN),
             (o, v) -> o.treeFelling = v,
             o -> o.treeFelling
@@ -265,6 +272,7 @@ public class TuningConfig {
     protected boolean itemMerging = true;
     protected int itemMergingRadius = 8;
     protected int itemMergingIntervalTicks = 20;
+    protected int itemMergingMaxLifetime = 60;
     protected boolean treeFelling = true;
     protected int treeMaxBlocks = 192;
     protected boolean gcStutterGuard = true;
@@ -313,6 +321,7 @@ public class TuningConfig {
         resolved.itemMerging = pick(file.itemMerging, asset != null ? asset.itemMerging : null, true);
         resolved.itemMergingRadius = pick(file.itemMergingRadius, asset != null ? asset.itemMergingRadius : null, 8);
         resolved.itemMergingIntervalTicks = pick(file.itemMergingIntervalTicks, asset != null ? asset.itemMergingIntervalTicks : null, 20);
+        resolved.itemMergingMaxLifetime = pick(file.itemMergingMaxLifetime, asset != null ? asset.itemMergingMaxLifetime : null, 60);
         resolved.treeFelling = pick(file.treeFelling, asset != null ? asset.treeFelling : null, true);
         resolved.treeMaxBlocks = pick(file.treeMaxBlocks, asset != null ? asset.treeMaxBlocks : null, 192);
         resolved.gcStutterGuard = pick(file.gcStutterGuard, asset != null ? asset.gcStutterGuard : null, true);
@@ -434,6 +443,10 @@ public class TuningConfig {
         return Math.max(1, itemMergingIntervalTicks);
     }
 
+    public int getItemMaxLifetime() {
+        return Math.max(0, itemMergingMaxLifetime);
+    }
+
     public boolean isTreeFelling() {
         return treeFelling;
     }
@@ -486,7 +499,7 @@ public class TuningConfig {
             + " quietLogging=" + flag(quietLogging)
             + " memoryGuard=" + flag(memoryGuard) + "(maxView" + guardViewDistance
             + "/mapView" + guardMapRadius + "/entityCap" + entityHardCap + ")"
-            + " itemMerging=" + flag(itemMerging) + "(r" + itemMergingRadius + "/every" + itemMergingIntervalTicks + ")"
+            + " itemMerging=" + flag(itemMerging) + "(r" + itemMergingRadius + "/every" + itemMergingIntervalTicks + "/ttl" + itemMergingMaxLifetime + ")"
             + " treeFelling=" + flag(treeFelling) + "(max" + treeMaxBlocks + ")"
             + " gcStutterGuard=" + flag(gcStutterGuard)
             + " farView=" + flag(farView) + "(entity" + entityViewDistance + "/tick" + farHotRadius + ")"

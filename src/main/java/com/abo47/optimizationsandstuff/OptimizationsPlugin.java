@@ -122,6 +122,7 @@ public class OptimizationsPlugin extends JavaPlugin {
             + " merged=" + itemMerging.getMerged()
             + " mergeRemoved=" + itemMerging.getRemoved()
             + " mergeScans=" + itemMerging.getScans()
+            + " ttlCapped=" + itemMerging.getTtlCapped()
             + " treesFelled=" + treeFelling.getTreesFelled()
             + " blocksFelled=" + treeFelling.getBlocksFelled()
             + " stutterMaxMs=" + gcStutterGuard.getStutterMaxMs()

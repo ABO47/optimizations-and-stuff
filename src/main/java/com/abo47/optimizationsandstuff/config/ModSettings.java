@@ -100,6 +100,10 @@ public class ModSettings {
     public Integer itemMergingIntervalTicks;
 
     @Nullable
+    @SerializedName("ItemMergingMaxLifetime")
+    public Integer itemMergingMaxLifetime;
+
+    @Nullable
     @SerializedName("TreeFelling")
     public Boolean treeFelling;
 
@@ -164,6 +168,7 @@ public class ModSettings {
         settings.itemMerging = true;
         settings.itemMergingRadius = 8;
         settings.itemMergingIntervalTicks = 20;
+        settings.itemMergingMaxLifetime = 60;
         settings.treeFelling = true;
         settings.treeMaxBlocks = 192;
         settings.gcStutterGuard = true;
