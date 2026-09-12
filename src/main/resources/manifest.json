@@ -1,0 +1,25 @@
+{
+    "Group": "Abo47",
+    "Name": "optimizationsandstuff",
+    "Version": "0.1.0-alpha",
+    "Description": "Server-side performance optimizations",
+    "Authors": [
+        {
+            "Name": "abo47"
+        }
+    ],
+    "Website": "",
+    "DisabledByDefault": false,
+    "IncludesAssetPack": false,
+    "Dependencies": {
+        
+    },
+    "OptionalDependencies": {
+        
+    },
+    "ServerVersion": ">=0.6.0",
+    "Main": "com.abo47.optimizationsandstuff.OptimizationsPlugin",
+    "UpdateChecker": {
+        "CurseForge": ""
+    }
+}

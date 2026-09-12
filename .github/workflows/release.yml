@@ -1,0 +1,139 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release. Leave blank to use version from gradle.properties."
+        required: false
+        default: ""
+      tag:
+        description: "Git tag to create or update. Leave blank to use v<version>."
+        required: false
+        default: ""
+      changelog:
+        description: "Changelog file. Leave blank to use changelogs/<version>.md."
+        required: false
+        default: ""
+      draft:
+        description: "Create the GitHub release as a draft."
+        required: true
+        type: boolean
+        default: true
+      prerelease:
+        description: "Mark the GitHub release as a prerelease."
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  release:
+    name: Build and release Hytale mod
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Resolve release metadata
+        id: meta
+        shell: bash
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_TAG: ${{ inputs.tag }}
+          INPUT_CHANGELOG: ${{ inputs.changelog }}
+        run: |
+          set -euo pipefail
+
+          version="$INPUT_VERSION"
+          if [ -z "$version" ]; then
+            version="$(sed -n 's/^version=//p' gradle.properties | tail -n 1)"
+          fi
+          if [ -z "$version" ]; then
+            echo "Could not resolve release version." >&2
+            exit 1
+          fi
+
+          tag="$INPUT_TAG"
+          if [ -z "$tag" ]; then
+            tag="v${version}"
+          fi
+
+          changelog="$INPUT_CHANGELOG"
+          if [ -z "$changelog" ]; then
+            changelog="changelogs/${version}.md"
+          fi
+          if [ ! -f "$changelog" ]; then
+            echo "Changelog file not found: $changelog" >&2
+            echo "Create changelogs/${version}.md or provide a changelog path when running the workflow." >&2
+            exit 1
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "changelog_path=$changelog" >> "$GITHUB_OUTPUT"
+          echo "release_name=Optimizations And Stuff ${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Build mod jar
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          chmod +x ./gradlew
+          ./gradlew --no-daemon build -x test -Pversion="$RELEASE_VERSION"
+
+      - name: Stage release jar
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p release
+          jar="build/libs/optimizationsandstuff-${RELEASE_VERSION}.jar"
+
+          if [ ! -f "$jar" ]; then
+            echo "Expected release jar not found: $jar" >&2
+            echo "Available jars:" >&2
+            find build/libs -maxdepth 1 -type f -name "*.jar" -print >&2
+            exit 1
+          fi
+          cp "$jar" release/
+
+          ls -lh release
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: optimizationsandstuff-${{ steps.meta.outputs.version }}
+          path: release/*
+          if-no-files-found: error
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: ${{ steps.meta.outputs.release_name }}
+          draft: ${{ inputs.draft }}
+          prerelease: ${{ inputs.prerelease }}
+          body_path: ${{ steps.meta.outputs.changelog_path }}
+          generate_release_notes: false
+          files: |
+            release/*.jar
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
